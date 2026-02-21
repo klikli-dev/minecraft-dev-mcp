@@ -64,13 +64,32 @@ export class RemapService {
     outputPath: string,
     onProgress?: (progress: string) => void,
   ): Promise<string> {
-    // Get input JAR (original Minecraft client)
-    const inputJar = await this.versionManager.getVersionJar(version, (downloaded, total) => {
-      if (onProgress) {
-        const percent = ((downloaded / total) * 100).toFixed(1);
-        onProgress(`Downloading Minecraft ${version}: ${percent}%`);
+    const getInputJar = async (): Promise<string> => {
+      return await this.versionManager.getVersionJar(version, (downloaded, total) => {
+        if (onProgress) {
+          const percent = ((downloaded / total) * 100).toFixed(1);
+          onProgress(`Downloading Minecraft ${version}: ${percent}%`);
+        }
+      });
+    };
+
+    // Minecraft 26.1+ ships unobfuscated JARs - no remapping is possible or needed.
+    const isUnobfuscated = await this.versionManager.isVersionUnobfuscated(version);
+    if (isUnobfuscated) {
+      if (mapping !== 'mojmap') {
+        throw new Error(
+          `${mapping} mappings are not supported for unobfuscated Minecraft versions. ` +
+            `Version ${version} ships without obfuscation - use 'mojmap' mapping instead.`,
+        );
       }
-    });
+      // The raw JAR is already in Mojang's human-readable names; decompile it directly.
+      const inputJar = await getInputJar();
+      logger.info(`Version ${version} is unobfuscated - skipping remapping (mojmap)`);
+      return inputJar;
+    }
+
+    // Get input JAR (original Minecraft client)
+    const inputJar = await getInputJar();
 
     // Yarn mappings require two-step remapping: official -> intermediary -> named
     if (mapping === 'yarn') {

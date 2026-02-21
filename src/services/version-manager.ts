@@ -8,6 +8,17 @@ import { logger } from '../utils/logger.js';
  * Manages Minecraft versions - downloading, caching, and metadata
  */
 export class VersionManager {
+  /**
+   * First known unobfuscated Minecraft build.
+   * 26.1-snapshot-1 released at this timestamp and removed client obfuscation.
+   */
+  private static readonly UNOBFUSCATED_CUTOFF_MS = Date.parse('2025-12-16T12:42:29+00:00');
+  /**
+   * Emergency overrides for Mojang metadata anomalies.
+   * Keyed by exact version id from version JSON.
+   */
+  private static readonly UNOBFUSCATED_VERSION_OVERRIDES: Readonly<Record<string, boolean>> = {};
+
   private downloader = getMojangDownloader();
   private cache = getCacheManager();
 
@@ -140,6 +151,45 @@ export class VersionManager {
     if (!exists) {
       throw new VersionNotFoundError(version);
     }
+  }
+
+  /**
+   * Check if a Minecraft version ships an unobfuscated JAR.
+   *
+   * Mojang's authoritative signal is the presence/absence of `client_mappings`
+   * in the version JSON:
+   * - present: obfuscated client JAR (reverse mapping required)
+   * - absent: potentially unobfuscated client JAR
+   *
+   * Important: some older obfuscated versions (e.g. early 1.14.x) also lack
+   * `client_mappings` metadata, so we also gate by the known 26.1 cutover time.
+   */
+  async isVersionUnobfuscated(version: string): Promise<boolean> {
+    const versionJson = await this.downloader.getVersionJson(version);
+
+    const override = VersionManager.UNOBFUSCATED_VERSION_OVERRIDES[versionJson.id];
+    if (override !== undefined) {
+      logger.warn(
+        `Using unobfuscated override for ${versionJson.id}: ${override ? 'unobfuscated' : 'obfuscated'}`,
+      );
+      return override;
+    }
+
+    if (versionJson.downloads.client_mappings) {
+      return false;
+    }
+
+    // Early legacy versions can be missing client_mappings while still obfuscated.
+    // Treat missing client_mappings as unobfuscated only at/after the known cutover.
+    const releaseTimeMs = Date.parse(versionJson.releaseTime);
+    if (!Number.isFinite(releaseTimeMs)) {
+      logger.warn(
+        `Version ${versionJson.id} has invalid releaseTime '${versionJson.releaseTime}', defaulting to obfuscated`,
+      );
+      return false;
+    }
+
+    return releaseTimeMs >= VersionManager.UNOBFUSCATED_CUTOFF_MS;
   }
 
   /**

@@ -16,6 +16,7 @@ import { downloadFile, fetchJson } from './http-client.js';
 
 export class MojangDownloader {
   private manifestCache: VersionManifest | null = null;
+  private versionJsonCache = new Map<string, Promise<VersionJson>>();
 
   /**
    * Get version manifest (cached)
@@ -36,13 +37,28 @@ export class MojangDownloader {
    * Get version JSON for a specific version
    */
   async getVersionJson(version: string): Promise<VersionJson> {
-    const manifest = await this.getVersionManifest();
-    const versionInfo = findVersion(manifest, version);
+    const cachedVersionJson = this.versionJsonCache.get(version);
+    if (cachedVersionJson) {
+      return cachedVersionJson;
+    }
 
-    logger.info(`Fetching version JSON for ${version}`);
-    const versionJson = await fetchJson<VersionJson>(versionInfo.url);
+    const versionJsonPromise = (async () => {
+      const manifest = await this.getVersionManifest();
+      const versionInfo = findVersion(manifest, version);
 
-    return versionJson;
+      logger.info(`Fetching version JSON for ${version}`);
+      return await fetchJson<VersionJson>(versionInfo.url);
+    })();
+
+    this.versionJsonCache.set(version, versionJsonPromise);
+
+    try {
+      return await versionJsonPromise;
+    } catch (error) {
+      // Allow retries after transient failures.
+      this.versionJsonCache.delete(version);
+      throw error;
+    }
   }
 
   /**

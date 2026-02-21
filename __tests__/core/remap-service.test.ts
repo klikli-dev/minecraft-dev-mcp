@@ -5,7 +5,7 @@ import { getCacheManager } from '../../src/cache/cache-manager.js';
 import { verifyJavaVersion } from '../../src/java/java-process.js';
 import { getDecompileService } from '../../src/services/decompile-service.js';
 import { getRemapService } from '../../src/services/remap-service.js';
-import { TEST_MAPPING, TEST_VERSION } from '../test-constants.js';
+import { TEST_MAPPING, TEST_VERSION, UNOBFUSCATED_TEST_VERSION } from '../test-constants.js';
 
 /**
  * JAR Remapping Tests
@@ -279,7 +279,7 @@ describe('JAR Remapping', () => {
       const source = await decompileService.getClassSource(
         TEST_VERSION,
         'net.minecraft.world.entity.Entity',
-        'mojmap'
+        'mojmap',
       );
 
       expect(source).toBeDefined();
@@ -301,7 +301,7 @@ describe('JAR Remapping', () => {
       const source = await decompileService.getClassSource(
         TEST_VERSION,
         'net.minecraft.world.entity.Entity',
-        'mojmap'
+        'mojmap',
       );
 
       expect(source).toBeDefined();
@@ -318,7 +318,7 @@ describe('JAR Remapping', () => {
       const source = await decompileService.getClassSource(
         TEST_VERSION,
         'net.minecraft.server.MinecraftServer',
-        'mojmap'
+        'mojmap',
       );
 
       expect(source).toBeDefined();
@@ -342,7 +342,7 @@ describe('JAR Remapping', () => {
       const source = await decompileService.getClassSource(
         TEST_VERSION,
         'net.minecraft.entity.Entity',
-        'yarn'
+        'yarn',
       );
 
       expect(source).toBeDefined();
@@ -361,7 +361,7 @@ describe('JAR Remapping', () => {
       const source = await decompileService.getClassSource(
         TEST_VERSION,
         'net.minecraft.entity.Entity',
-        'yarn'
+        'yarn',
       );
 
       expect(source).toBeDefined();
@@ -372,6 +372,32 @@ describe('JAR Remapping', () => {
       const fieldMatch = source.match(/field_\d+/g);
       const intermediaryFieldCount = fieldMatch ? fieldMatch.length : 0;
       expect(intermediaryFieldCount).toBeLessThan(20);
+    }, 60000);
+  });
+
+  describe('Unobfuscated version handling', () => {
+    // 26.1+ snapshots ship without obfuscation - no intermediary or Yarn mappings exist.
+    it('should throw a clear error when requesting yarn mappings for an unobfuscated version', async () => {
+      const remapService = getRemapService();
+      await expect(remapService.getRemappedJar(UNOBFUSCATED_TEST_VERSION, 'yarn')).rejects.toThrow(
+        /yarn mappings are not supported for unobfuscated/i,
+      );
+    }, 60000); // network call to fetch version JSON on first run
+
+    it('should throw a clear error when requesting intermediary mappings for an unobfuscated version', async () => {
+      const remapService = getRemapService();
+      await expect(
+        remapService.getRemappedJar(UNOBFUSCATED_TEST_VERSION, 'intermediary'),
+      ).rejects.toThrow(/intermediary mappings are not supported for unobfuscated/i);
+    }, 60000);
+
+    it('should return the raw client JAR for mojmap on an unobfuscated version', async () => {
+      const remapService = getRemapService();
+      const jarPath = await remapService.getRemappedJar(UNOBFUSCATED_TEST_VERSION, 'mojmap');
+      expect(jarPath).toBeDefined();
+      expect(existsSync(jarPath)).toBe(true);
+      // The returned path is the raw client JAR, not a remapped copy
+      expect(jarPath).not.toContain('remapped');
     }, 60000);
   });
 });

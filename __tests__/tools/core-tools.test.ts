@@ -15,7 +15,12 @@ import {
   tools,
 } from '../../src/server/tools.js';
 import { getDecompileService } from '../../src/services/decompile-service.js';
-import { METEOR_JAR_PATH, TEST_MAPPING, TEST_VERSION } from '../test-constants.js';
+import {
+  METEOR_JAR_PATH,
+  TEST_MAPPING,
+  TEST_VERSION,
+  UNOBFUSCATED_TEST_VERSION,
+} from '../test-constants.js';
 
 /**
  * Core MCP Tools Integration Tests
@@ -536,6 +541,24 @@ describe('Decompile and Remap Tools', () => {
     // Should mention completion or classes
     expect(text).toMatch(/completed|classes/i);
   }, 600000);
+
+  it('should return actionable error for decompile_minecraft_version on unobfuscated yarn', async () => {
+    const result = await handleDecompileMinecraftVersion({
+      version: UNOBFUSCATED_TEST_VERSION,
+      mapping: 'yarn',
+      force: false,
+    });
+
+    expect(result).toBeDefined();
+    expect(result.isError).toBe(true);
+    expect(result.content).toBeDefined();
+    expect(result.content.length).toBe(1);
+
+    const text = result.content[0].text;
+    expect(text).toContain('Decompilation failed:');
+    expect(text).toContain('mojmap');
+    expect(text).toMatch(/use ['"]mojmap['"] mapping/i);
+  }, 120000);
 
   it('should handle remap_mod_jar with Fabric mod', async () => {
     // Skip if fixture doesn't exist

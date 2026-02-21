@@ -1,57 +1,65 @@
-# Manual Version-Specific Tests
+# Manual Version And Transport Tests
 
-This directory contains comprehensive integration tests for specific Minecraft versions. These tests verify that the MCP server works correctly with older/legacy versions and different mapping types.
+This directory contains long-running tests that are intentionally excluded from default CI.
 
-## Why Manual Tests?
+It now includes two categories:
+- Service-level version compatibility suites (`v1.21.10`, `v1.20.1`, `v1.19.4`, `mojmap`)
+- True MCP transport E2E suite (`mcp/`) that starts the stdio server and validates tool calls through an MCP client
 
-- **CI Performance**: Main test suite only tests latest version (currently 1.21.11) to keep CI builds fast
-- **Legacy Support**: Verifies compatibility with older Minecraft versions (1.19.x, 1.20.x, etc.)
-- **Mapping Coverage**: Tests both Yarn and Mojmap mapping types
-- **Version-Specific**: Each directory has its own test constants and fixtures
-- **Comprehensive**: Full pipeline tests (JAR download → mapping → remap → decompile → registry)
+## Why Manual Tests Exist
+
+- CI performance: default PR CI runs a focused suite
+- Legacy coverage: older versions still need real validation
+- Mapping coverage: Yarn and Mojmap behavior differ by version
+- Transport coverage: stdio MCP integration tests are heavier than direct handler tests
 
 ## Directory Structure
 
-```
+```text
 manual/
-├── v1.21.10/          # Yarn tests - Last obfuscated stable before 1.21.11
-│   ├── test-constants.ts
-│   └── full-suite.test.ts
-├── v1.20.1/           # Yarn tests - Legacy version (1.20.x era)
-│   ├── test-constants.ts
-│   └── full-suite.test.ts
-├── v1.19.4/           # Yarn tests - Older legacy version (1.19.x era)
-│   ├── test-constants.ts
-│   └── full-suite.test.ts
-└── mojmap/            # Mojmap-specific tests (all versions)
-    ├── test-constants.ts
-    └── mojmap-remapping.test.ts
+  mcp/                # stdio MCP server E2E matrix tests
+    stdio-matrix.test.ts
+    test-constants.ts
+  v1.21.10/           # Yarn pipeline tests
+    test-constants.ts
+    full-suite.test.ts
+  v1.20.1/            # Yarn pipeline tests
+    test-constants.ts
+    full-suite.test.ts
+  v1.19.4/            # Yarn pipeline tests
+    test-constants.ts
+    full-suite.test.ts
+  mojmap/             # Mojmap remap/decompile tests
+    test-constants.ts
+    mojmap-remapping.test.ts
 ```
 
-## Running Manual Tests
+## Run Commands
 
-### Yarn Tests (Default)
-
-#### Run All Yarn Manual Tests
+Run all manual tests:
 ```bash
 npm run test:manual
 ```
 
-#### Run Specific Version (Yarn)
+Run MCP transport matrix only:
+```bash
+npm run test:manual:mcp
+```
+
+Run MCP transport quick smoke matrix:
+```bash
+npm run test:manual:mcp:smoke
+```
+
+Run specific service-level suites:
 ```bash
 npm run test:manual:1.21.10
 npm run test:manual:1.20.1
 npm run test:manual:1.19.4
-```
-
-### Mojmap Tests
-
-#### Run Mojmap Tests (Default: 1.21.11)
-```bash
 npm run test:manual:mojmap
 ```
 
-#### Run Specific Version (Mojmap)
+Run specific Mojmap version:
 ```bash
 npm run test:manual:mojmap:1.21.11
 npm run test:manual:mojmap:1.21.10
@@ -59,81 +67,33 @@ npm run test:manual:mojmap:1.20.1
 npm run test:manual:mojmap:1.19.4
 ```
 
-### Run Everything (CI + Manual)
+Run everything (default + manual):
 ```bash
 npm run test:all
 ```
 
-## Adding New Version Tests
+## MCP Matrix Version Selection
 
-To add tests for a new Minecraft version:
+`__tests__/manual/mcp/stdio-matrix.test.ts` supports `MCP_E2E_VERSIONS`.
 
-1. Create version directory: `__tests__/manual/vX.XX.X/`
-2. Create `test-constants.ts`:
-   ```typescript
-   export const TEST_VERSION = 'X.XX.X';
-   export const TEST_MAPPING = 'yarn' as const;
-   ```
-3. Create `full-suite.test.ts` (copy from existing version)
-4. Add npm script to `package.json`:
-   ```json
-   "test:manual:X.XX.X": "vitest __tests__/manual/vX.XX.X"
-   ```
-
-## Test Coverage
-
-Each version's test suite verifies:
-
-- ✅ Client JAR download from Mojang
-- ✅ Server JAR download (for registry extraction)
-- ✅ Yarn mapping download from Fabric Maven
-- ✅ JAR remapping (2-step process for Yarn)
-- ✅ Full source code decompilation
-- ✅ Individual class source retrieval (Entity, Item, Vec3d)
-- ✅ Registry data extraction (blocks, items)
-- ✅ Error handling (missing classes, invalid versions)
-
-## Timeouts
-
-Manual tests have long timeouts due to large downloads:
-- JAR download: 2 minutes
-- Remapping: 5 minutes
-- Decompilation: 10 minutes
-- Registry extraction: 5 minutes
-
-## Important Notes
-
-### First Run
-First run will download ~400-500 MB per version:
-- Minecraft client JAR (~50 MB)
-- Minecraft server JAR (~50 MB)
-- Yarn mappings (~5 MB)
-- Remapped JAR (~50 MB)
-- Decompiled source (~200-300 MB)
-
-### Caching
-Subsequent runs are much faster (instant) due to caching.
-
-### Version Support
-- **1.21.11**: Last obfuscated Minecraft version (Yarn available)
-- **1.21.10**: Previous stable version
-- **1.20.x**: Legacy version, fully supported
-- **1.19.x**: Older legacy version, fully supported
-- **26.1+**: Future deobfuscated versions (will require code changes)
-
-### Yarn Mappings
-After Minecraft 1.21.11, Yarn mappings will be discontinued as Mojang removes obfuscation from the game. Tests for versions ≥26.1 will need to use official mappings or a new deobfuscated workflow.
-
-## CI Configuration
-
-The main `vitest.config.ts` excludes manual tests:
-```typescript
-exclude: ['__tests__/manual/**']
+Example:
+```bash
+cross-env MCP_E2E_VERSIONS=1.21.11,1.20.1,26.1-snapshot-1,26.1-snapshot-9 npm run test:manual:mcp
 ```
 
-Manual tests use `vitest.manual.config.ts` which only includes them:
-```typescript
-include: ['__tests__/manual/**/*.test.ts']
-```
+Versions are classified at runtime using Mojang metadata via
+`VersionManager.isVersionUnobfuscated()`, not by hardcoded version-id patterns.
 
-This keeps CI fast while still allowing comprehensive version testing on demand.
+Default matrix includes:
+- `1.21.11`
+- `1.21.10`
+- `1.20.1`
+- `1.19.4`
+- `26.1-snapshot-1` (first unobfuscated boundary)
+- `26.1-snapshot-8` (mid-series unobfuscated check)
+- `26.1-snapshot-9` (latest unobfuscated snapshot)
+
+## Version Support Notes
+
+- `1.21.11` and below: obfuscated client, Yarn and Mojmap remap paths apply
+- `26.1+` snapshots: unobfuscated client, use `mojmap` path, Yarn should fail with actionable guidance
