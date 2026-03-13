@@ -151,10 +151,15 @@ class MinecraftDevMCPServer {
     const port = portArgIndex !== -1 && args.length > portArgIndex + 1
       ? parseInt(args[portArgIndex + 1], 10)
       : 3000;
+    
+    const hostArgIndex = args.indexOf('--host');
+    const host = hostArgIndex !== -1 && args.length > hostArgIndex + 1
+      ? args[hostArgIndex + 1]
+      : '0.0.0.0';
 
     if (isHttp) {
       // Start server with HTTP transport (SSE)
-      const app = createMcpExpressApp();
+      const app = createMcpExpressApp({ host });
 
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => crypto.randomUUID(),
@@ -173,9 +178,9 @@ class MinecraftDevMCPServer {
 
       await this.server.connect(transport);
 
-      app.listen(port, () => {
-        logger.info(`Minecraft Dev MCP Server started with HTTP transport on port ${port}`);
-        logger.info(`Endpoint: http://127.0.0.1:${port}/mcp`);
+      app.listen(port, host, () => {
+        logger.info(`Minecraft Dev MCP Server started with HTTP transport on ${host}:${port}`);
+        logger.info(`Endpoint: http://${host}:${port}/mcp`);
       });
     } else {
       // Start server with stdio transport
