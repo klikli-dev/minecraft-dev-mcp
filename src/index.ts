@@ -2,6 +2,9 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import crypto from 'node:crypto';
 import {
   CallToolRequestSchema,
   ListResourceTemplatesRequestSchema,
@@ -142,12 +145,46 @@ class MinecraftDevMCPServer {
       process.exit(1);
     }
 
-    // Start server with stdio transport
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
+    const args = process.argv.slice(2);
+    const portArgIndex = args.indexOf('--port');
+    const isHttp = portArgIndex !== -1 || args.includes('--http');
+    const port = portArgIndex !== -1 && args.length > portArgIndex + 1
+      ? parseInt(args[portArgIndex + 1], 10)
+      : 3000;
 
-    logger.info('Minecraft Dev MCP Server started');
-    logger.info('Server is ready to accept requests');
+    if (isHttp) {
+      // Start server with HTTP transport (SSE)
+      const app = createMcpExpressApp();
+
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => crypto.randomUUID(),
+      });
+
+      app.all('/mcp', async (req, res) => {
+        try {
+          await transport.handleRequest(req, res, req.body);
+        } catch (error) {
+          logger.error('Error handling HTTP request:', error);
+          if (!res.headersSent) {
+            res.status(500).send({ error: 'Internal Server Error' });
+          }
+        }
+      });
+
+      await this.server.connect(transport);
+
+      app.listen(port, () => {
+        logger.info(`Minecraft Dev MCP Server started with HTTP transport on port ${port}`);
+        logger.info(`Endpoint: http://127.0.0.1:${port}/mcp`);
+      });
+    } else {
+      // Start server with stdio transport
+      const transport = new StdioServerTransport();
+      await this.server.connect(transport);
+
+      logger.info('Minecraft Dev MCP Server started on stdio');
+      logger.info('Server is ready to accept requests');
+    }
   }
 }
 

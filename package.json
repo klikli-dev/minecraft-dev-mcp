@@ -7,7 +7,11 @@
   "bin": {
     "minecraft-dev-mcp": "./dist/index.js"
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
@@ -33,7 +37,14 @@
     "lint:fix": "biome check --write .",
     "clean": "rimraf dist"
   },
-  "keywords": ["minecraft", "fabric", "mod-development", "mcp", "decompiler", "mappings"],
+  "keywords": [
+    "minecraft",
+    "fabric",
+    "mod-development",
+    "mcp",
+    "decompiler",
+    "mappings"
+  ],
   "author": "GhostTypes",
   "license": "MIT",
   "repository": {
@@ -48,12 +59,14 @@
     "@modelcontextprotocol/sdk": "^1.0.4",
     "adm-zip": "^0.5.16",
     "better-sqlite3": "^11.7.0",
+    "express": "^5.2.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/adm-zip": "^0.5.5",
     "@types/better-sqlite3": "^7.6.12",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.10.1",
     "cross-env": "^7.0.3",
     "rimraf": "^6.0.1",
