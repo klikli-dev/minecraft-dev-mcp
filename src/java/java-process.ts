@@ -11,7 +11,7 @@ import { normalizeOptionalPath, normalizePath } from '../utils/path-converter.js
 function getJavaExecutable(): string {
   const javaHome = process.env.JAVA_HOME;
   if (javaHome) {
-    return path.join(javaHome, 'bin', 'java');
+    return path.join(normalizePath(javaHome), 'bin', 'java');
   }
   return 'java';
 }
