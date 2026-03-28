@@ -126,6 +126,28 @@ Add to `.claude/settings.local.json` in your project, or to your global Claude C
 
 <div align="center">
 
+## HTTP (SSE) Transport Setup
+
+For editors or clients that require HTTP/SSE communication, start the server in HTTP mode.
+
+| Flag | Description |
+| --- | --- |
+| `--http` | Starts the server with the HTTP/SSE transport instead of stdio |
+| `--port <number>` | Port to listen on (default: `3000`) • also enables HTTP mode |
+| `--host <address>` | Host to listen on (default: `0.0.0.0`) |
+
+**Example:**
+
+```bash
+minecraft-dev-mcp --http --port 3000
+```
+
+SSE endpoint: `http://localhost:3000/sse`
+
+The server supports concurrent MCP client sessions over the SSE transport.
+
+</div>
+
 ## Tools Reference
 
 20 tools organized by functionality.
@@ -318,6 +340,7 @@ Yarn mappings are discontinued after 1.21.11, which is the last obfuscated Minec
 | **Lint** | `npm run lint` |
 | **Lint with autofix** | `npm run lint:fix` |
 | **Integration tests** | `npm test` |
+| **Dev mode (HTTP/SSE)** | `npm run dev:http` |
 | **Full pipeline — 1.21.10** | `npm run test:manual:1.21.10` |
 | **Full pipeline — 1.20.1** | `npm run test:manual:1.20.1` |
 | **MCP stdio tests** | `npm run test:manual:mcp` |
