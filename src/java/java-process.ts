@@ -1,7 +1,20 @@
 import { spawn } from 'node:child_process';
+import path from 'node:path';
 import { JavaProcessError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import { normalizeOptionalPath, normalizePath } from '../utils/path-converter.js';
+
+/**
+ * Resolve the Java executable path.
+ * Prefers JAVA_HOME/bin/java if JAVA_HOME is set, otherwise falls back to 'java' on PATH.
+ */
+function getJavaExecutable(): string {
+  const javaHome = process.env.JAVA_HOME;
+  if (javaHome) {
+    return path.join(normalizePath(javaHome), 'bin', 'java');
+  }
+  return 'java';
+}
 
 export interface JavaProcessOptions {
   maxMemory?: string; // e.g., "2G"
@@ -70,7 +83,8 @@ export async function executeJavaProcess(
     javaArgs = [...baseJvmArgs, '-jar', normalizedJarPath, ...normalizedArgs];
   }
 
-  logger.info(`Executing Java: java ${javaArgs.join(' ')}`);
+  const javaExe = getJavaExecutable();
+  logger.info(`Executing Java: ${javaExe} ${javaArgs.join(' ')}`);
 
   return new Promise((resolve, reject) => {
     const spawnOptions: { stdio: ['ignore', 'pipe', 'pipe']; cwd?: string } = {
@@ -82,7 +96,7 @@ export async function executeJavaProcess(
       spawnOptions.cwd = normalizedCwd;
     }
 
-    const process = spawn('java', javaArgs, spawnOptions);
+    const process = spawn(javaExe, javaArgs, spawnOptions);
 
     let stdout = '';
     let stderr = '';
@@ -144,7 +158,8 @@ export async function executeJavaProcess(
  */
 export async function getJavaVersion(): Promise<string> {
   return new Promise((resolve, reject) => {
-    const process = spawn('java', ['-version'], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const javaExe = getJavaExecutable();
+    const process = spawn(javaExe, ['-version'], { stdio: ['ignore', 'pipe', 'pipe'] });
 
     let output = '';
 
