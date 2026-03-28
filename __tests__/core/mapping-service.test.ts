@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { getMappingService } from '../../src/services/mapping-service.js';
-import { TEST_MAPPING, TEST_VERSION } from '../test-constants.js';
+import { TEST_MAPPING, TEST_VERSION, UNOBFUSCATED_TEST_VERSION } from '../test-constants.js';
 
 /**
  * Mapping Service Tests
@@ -433,4 +433,64 @@ describe('Mojmap Tiny v2 Structure Verification', () => {
     expect(firstLine).toContain('intermediary');
     expect(firstLine).toContain('named');
   }, 180000);
+});
+
+/**
+ * Unobfuscated version handling (26.1+)
+ *
+ * Unobfuscated Minecraft versions ship JARs without obfuscation.
+ * No intermediary, yarn, or mojmap mapping files exist for these versions.
+ * MappingService.getMappings() and lookupMapping() must fail with clear,
+ * actionable error messages instead of cryptic download failures.
+ *
+ * Reproduces: https://github.com/MCDxAI/minecraft-dev-mcp/issues/5
+ */
+describe('Unobfuscated version handling', () => {
+  it('should throw actionable error for getMappings(intermediary) on unobfuscated version', async () => {
+    const mappingService = getMappingService();
+    await expect(
+      mappingService.getMappings(UNOBFUSCATED_TEST_VERSION, 'intermediary'),
+    ).rejects.toThrow(/unobfuscated.*mojmap/is);
+  }, 30000);
+
+  it('should throw actionable error for getMappings(yarn) on unobfuscated version', async () => {
+    const mappingService = getMappingService();
+    await expect(
+      mappingService.getMappings(UNOBFUSCATED_TEST_VERSION, 'yarn'),
+    ).rejects.toThrow(/unobfuscated.*mojmap/is);
+  }, 30000);
+
+  it('should throw actionable error for getMappings(mojmap) on unobfuscated version', async () => {
+    const mappingService = getMappingService();
+    await expect(
+      mappingService.getMappings(UNOBFUSCATED_TEST_VERSION, 'mojmap'),
+    ).rejects.toThrow(/unobfuscated.*already in Mojang/is);
+  }, 30000);
+
+  it('should throw actionable error for lookupMapping on unobfuscated version', async () => {
+    const mappingService = getMappingService();
+    // lookupMapping calls getMappings internally, which throws for unobfuscated versions
+    await expect(
+      mappingService.lookupMapping(
+        UNOBFUSCATED_TEST_VERSION,
+        'Entity',
+        'mojmap',
+        'yarn',
+      ),
+    ).rejects.toThrow(/unobfuscated/i);
+  }, 30000);
+
+  it('should allow same-type lookupMapping on unobfuscated version (identity)', async () => {
+    const mappingService = getMappingService();
+    // Same source and target mapping should still return identity (no mapping file needed)
+    const result = await mappingService.lookupMapping(
+      UNOBFUSCATED_TEST_VERSION,
+      'net/minecraft/world/entity/Entity',
+      'mojmap',
+      'mojmap',
+    );
+    expect(result.found).toBe(true);
+    expect(result.source).toBe('net/minecraft/world/entity/Entity');
+    expect(result.target).toBe('net/minecraft/world/entity/Entity');
+  }, 10000);
 });

@@ -70,5 +70,16 @@ describe('Version Management', () => {
       const result = await versionManager.isVersionUnobfuscated('26.1-snapshot-9');
       expect(result).toBe(true);
     }, 30000);
+
+    // Regression tests for https://github.com/MCDxAI/minecraft-dev-mcp/issues/5
+    it.each([
+      '26.1-snapshot-10',
+      '26.1-snapshot-11',
+      '26.1-rc-3',
+    ])('should return true for %s (issue #5)', async (version) => {
+      const versionManager = getVersionManager();
+      const result = await versionManager.isVersionUnobfuscated(version);
+      expect(result).toBe(true);
+    }, 30000);
   });
 });

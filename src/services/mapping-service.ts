@@ -11,6 +11,7 @@ import { MappingNotFoundError } from '../utils/errors.js';
 import { ensureDir } from '../utils/file-utils.js';
 import { logger } from '../utils/logger.js';
 import { getMojmapTinyPath } from '../utils/paths.js';
+import { getVersionManager } from './version-manager.js';
 
 /**
  * Manages mapping downloads and caching
@@ -19,67 +20,81 @@ export class MappingService {
   private mojangDownloader = getMojangDownloader();
   private fabricMaven = getFabricMaven();
   private cache = getCacheManager();
+  private versionManager = getVersionManager();
 
   // Lock to prevent concurrent downloads of the same mappings
   private downloadLocks = new Map<string, Promise<string>>();
 
   /**
-   * Get or download mappings for a version
-   * Uses locking to prevent concurrent downloads of the same mapping
+   * Get or download mappings for a version.
+   * Flow: cache → dedupe lock → unobfuscated guard → recheck lock → download.
    */
   async getMappings(version: string, mappingType: MappingType): Promise<string> {
     const lockKey = `${version}-${mappingType}`;
 
-    // For Mojmap, check for converted Tiny file first (not raw ProGuard)
-    if (mappingType === 'mojmap') {
-      const convertedPath = getMojmapTinyPath(version);
-      if (existsSync(convertedPath)) {
-        logger.info(`Using cached Mojmap (Tiny format) mappings for ${version}: ${convertedPath}`);
-        return convertedPath;
-      }
-
-      // Check if download is already in progress
-      const existingDownload = this.downloadLocks.get(lockKey);
-      if (existingDownload) {
-        logger.info(`Waiting for existing Mojmap download of ${version} to complete`);
-        return existingDownload;
-      }
-
-      // Download and convert Mojmap with lock
-      const downloadPromise = this.downloadAndConvertMojmap(version);
-      this.downloadLocks.set(lockKey, downloadPromise);
-      try {
-        return await downloadPromise;
-      } finally {
-        this.downloadLocks.delete(lockKey);
-      }
-    }
-
-    // Check cache first for other mapping types
-    const cachedPath = this.cache.getMappingPath(version, mappingType);
+    // 1. Return immediately from cache without any network access
+    const cachedPath = this.getCachedMapping(version, mappingType);
     if (cachedPath) {
       logger.info(`Using cached ${mappingType} mappings for ${version}: ${cachedPath}`);
       return cachedPath;
     }
 
-    // Check if download is already in progress
+    // 2. Deduplicate concurrent downloads for the same version+type
     const existingDownload = this.downloadLocks.get(lockKey);
     if (existingDownload) {
       logger.info(`Waiting for existing ${mappingType} download of ${version} to complete`);
       return existingDownload;
     }
 
-    // Download based on type with lock
-    logger.info(`Downloading ${mappingType} mappings for ${version}`);
-    let downloadPromise: Promise<string>;
+    // 3. Unobfuscated versions (26.1+) have no mapping files — check before attempting download
+    await this.throwIfUnobfuscated(version, mappingType);
 
+    // 4. Recheck lock — another caller may have started a download during the async check above
+    const postCheckDownload = this.downloadLocks.get(lockKey);
+    if (postCheckDownload) {
+      return postCheckDownload;
+    }
+
+    // 5. Download with lock
+    logger.info(`Downloading ${mappingType} mappings for ${version}`);
+    const downloadPromise = this.startDownload(version, mappingType);
+    this.downloadLocks.set(lockKey, downloadPromise);
+    try {
+      return await downloadPromise;
+    } finally {
+      this.downloadLocks.delete(lockKey);
+    }
+  }
+
+  /**
+   * Check for a locally cached mapping file without hitting the network.
+   */
+  private getCachedMapping(version: string, mappingType: MappingType): string | null {
+    if (mappingType === 'mojmap') {
+      const convertedPath = getMojmapTinyPath(version);
+      return existsSync(convertedPath) ? convertedPath : null;
+    }
+    return this.cache.getMappingPath(version, mappingType) ?? null;
+  }
+
+  /**
+   * Start the actual download for a mapping type.
+   * Mojmap handles its own caching internally; yarn/intermediary are cached here.
+   */
+  private async startDownload(version: string, mappingType: MappingType): Promise<string> {
     switch (mappingType) {
-      case 'yarn':
-        downloadPromise = this.downloadAndExtractYarn(version);
-        break;
-      case 'intermediary':
-        downloadPromise = this.downloadAndExtractIntermediary(version);
-        break;
+      case 'mojmap':
+        return this.downloadAndConvertMojmap(version);
+      case 'yarn': {
+        const path = await this.downloadAndExtractYarn(version);
+        this.cache.cacheMapping(version, mappingType, path);
+        return path;
+      }
+      case 'intermediary': {
+        const path = await this.downloadAndExtractIntermediary(version);
+        this.cache.cacheMapping(version, mappingType, path);
+        return path;
+      }
       default:
         throw new MappingNotFoundError(
           version,
@@ -87,19 +102,6 @@ export class MappingService {
           `Unsupported mapping type: ${mappingType}`,
         );
     }
-
-    this.downloadLocks.set(lockKey, downloadPromise);
-    let mappingPath: string;
-    try {
-      mappingPath = await downloadPromise;
-    } finally {
-      this.downloadLocks.delete(lockKey);
-    }
-
-    // Cache the mapping
-    this.cache.cacheMapping(version, mappingType, mappingPath);
-
-    return mappingPath;
   }
 
   /**
@@ -192,8 +194,7 @@ export class MappingService {
       !parsed.header.namespaces.includes('named')
     ) {
       throw new Error(
-        `Invalid mapping-io output: expected namespaces 'intermediary' and 'named', ` +
-          `got ${parsed.header.namespaces.join(', ')}`
+        `Invalid mapping-io output: expected namespaces 'intermediary' and 'named', got ${parsed.header.namespaces.join(', ')}`,
       );
     }
 
@@ -225,6 +226,29 @@ export class MappingService {
     }
     // Mojmap should always exist for 1.21.1+
     // Intermediary should exist for all Fabric-supported versions
+  }
+
+  /**
+   * Throw a clear error if the version is unobfuscated and no mapping files exist.
+   * Called just before attempting a download, AFTER cache checks, so that cached
+   * mappings still work without hitting the network.
+   */
+  private async throwIfUnobfuscated(version: string, mappingType: MappingType): Promise<void> {
+    const isUnobfuscated = await this.versionManager.isVersionUnobfuscated(version);
+    if (!isUnobfuscated) return;
+
+    if (mappingType === 'mojmap') {
+      throw new MappingNotFoundError(
+        version,
+        mappingType,
+        `Mojmap mapping files are not available for unobfuscated version ${version}. The JAR is already in Mojang's human-readable names — decompile it directly with mapping 'mojmap'.`,
+      );
+    }
+    throw new MappingNotFoundError(
+      version,
+      mappingType,
+      `${mappingType} mappings are not available for unobfuscated version ${version}. Use 'mojmap' mapping instead — the JAR ships without obfuscation.`,
+    );
   }
 
   /**

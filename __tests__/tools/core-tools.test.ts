@@ -560,6 +560,20 @@ describe('Decompile and Remap Tools', () => {
     expect(text).toMatch(/use ['"]mojmap['"] mapping/i);
   }, 120000);
 
+  it('should return actionable error for find_mapping on unobfuscated version', async () => {
+    const result = await handleFindMapping({
+      symbol: 'Entity',
+      version: UNOBFUSCATED_TEST_VERSION,
+      sourceMapping: 'mojmap',
+      targetMapping: 'yarn',
+    });
+
+    expect(result).toBeDefined();
+    expect(result.isError).toBe(true);
+    const text = result.content[0].text;
+    expect(text).toMatch(/unobfuscated/i);
+  }, 60000);
+
   it('should handle remap_mod_jar with Fabric mod', async () => {
     // Skip if fixture doesn't exist
     if (!existsSync(METEOR_JAR_PATH)) {
