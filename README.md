@@ -148,6 +148,90 @@ The server supports concurrent MCP client sessions over the SSE transport.
 
 </div>
 
+---
+
+<div align="center">
+
+## CLI Interface
+
+For scripting, automation, and skill integration, use the standalone CLI instead of the MCP server.
+
+### Installation
+
+The CLI is included with the package:
+
+```bash
+npm install -g @mcdxai/minecraft-dev-mcp
+```
+
+Or from source:
+
+```bash
+npm run build
+npm link
+```
+
+### Usage
+
+```bash
+minecraft-dev-cli <command> [arguments]
+```
+
+### Commands
+
+| Command | Description |
+| --- | --- |
+| `minecraft-dev-cli list-tools` | List all available tools with their parameters |
+| `minecraft-dev-cli help` | Show help message |
+| `minecraft-dev-cli <tool-name> <args>` | Invoke a specific tool |
+
+### Examples
+
+```bash
+# List available tools
+minecraft-dev-cli list-tools
+
+# Get Minecraft source for a class
+minecraft-dev-cli get_minecraft_source '{"version": "1.21.10", "className": "net.minecraft.world.entity.Entity", "mapping": "yarn"}'
+
+# List available versions
+minecraft-dev-cli list_minecraft_versions '{}'
+
+# Analyze a mod JAR
+minecraft-dev-cli analyze_mod_jar '{"jarPath": "/path/to/mod.jar"}'
+
+# Search Minecraft code
+minecraft-dev-cli search_minecraft_code '{"version": "1.21.10", "query": "Entity", "searchType": "class", "mapping": "yarn"}'
+```
+
+### JSON Output
+
+All CLI commands return structured JSON:
+
+```json
+{
+  "success": true,
+  "tool": "get_minecraft_source",
+  "result": { ... }
+}
+```
+
+On error:
+
+```json
+{
+  "success": false,
+  "tool": "tool_name",
+  "error": "Error message"
+}
+```
+
+### Skill Integration
+
+The CLI is designed for use in skills and automation scripts. See the sample skill at [`.claude/skills/mc-source-lookup/SKILL.md`](.claude/skills/mc-source-lookup/SKILL.md) for detailed usage patterns.
+
+</div>
+
 ## Tools Reference
 
 20 tools organized by functionality.
@@ -345,6 +429,8 @@ Yarn mappings are discontinued after 1.21.11, which is the last obfuscated Minec
 | **Full pipeline — 1.20.1** | `npm run test:manual:1.20.1` |
 | **MCP stdio tests** | `npm run test:manual:mcp` |
 | **MCP Inspector** | `npm run inspect` |
+| **CLI help** | `minecraft-dev-cli help` |
+| **CLI list tools** | `minecraft-dev-cli list-tools` |
 
 </div>
 
@@ -371,6 +457,30 @@ npm run build
 | **Class not found** | Use the fully qualified class name (e.g., `net.minecraft.world.entity.Entity`) • Verify the version is decompiled |
 | **Registry returns no data** | Registry names use singular form: `block`, `item`, `entity` — not `blocks`, `items`, `entities` |
 | **WSL path error** | Both `/mnt/c/path/to/file` and `C:\path\to\file` are accepted for all JAR path parameters |
+
+</div>
+
+---
+
+<div align="center">
+
+## Skills
+
+Sample skills are included in [`.claude/skills/`](.claude/skills/) for common workflows:
+
+| Skill | Description |
+| --- | --- |
+| **[mc-source-lookup](.claude/skills/mc-source-lookup/SKILL.md)** | Quick Minecraft source code lookup using the CLI. Get class source, search code, and explore registries. |
+
+### Creating Custom Skills
+
+Skills are markdown files with YAML frontmatter. Use the CLI in your skills:
+
+```bash
+minecraft-dev-cli <tool-name> '<json-args>'
+```
+
+See the [mc-source-lookup](.claude/skills/mc-source-lookup/SKILL.md) skill for patterns and examples.
 
 </div>
 
