@@ -5,7 +5,8 @@
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
-    "minecraft-dev-mcp": "./dist/index.js"
+    "minecraft-dev-mcp": "./dist/index.js",
+    "minecraft-dev-cli": "./dist/cli.js"
   },
   "files": [
     "dist",
