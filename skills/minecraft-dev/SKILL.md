@@ -11,7 +11,7 @@ Use `minecraft-dev-cli` to inspect Minecraft code, mod code, loader metadata, ma
 
 1. Identify whether the user needs Minecraft source, mod source, mod loader metadata, mappings, registries, docs, validation, or version diffing.
 2. Pick the narrowest tool that answers the request.
-3. Run `minecraft-dev-cli <tool> '<json>'`.
+3. Run `minecraft-dev-cli <tool> '<json>'` on shells that preserve JSON quotes, or use `--key value` flags in PowerShell.
 4. Parse the JSON response and return only the useful result.
 5. If the request is vague, ask for the class name, file path, symbol, JAR path, or Minecraft version.
 
@@ -53,6 +53,16 @@ Read `references/tools.md` only when you need parameter details or example comma
 minecraft-dev-cli <tool> '{"key":"value"}'
 ```
 
+In PowerShell, native commands may strip quotes from inline JSON. Prefer one of these forms there:
+
+```powershell
+minecraft-dev-cli <tool> --key value --key2 value2
+```
+
+```powershell
+minecraft-dev-cli --% <tool> '{"key":"value"}'
+```
+
 All commands return JSON with:
 - `success`
 - `tool`
@@ -63,6 +73,11 @@ All commands return JSON with:
 ### List versions
 ```bash
 minecraft-dev-cli list_minecraft_versions '{}'
+```
+
+PowerShell-friendly alternative:
+```powershell
+minecraft-dev-cli list_minecraft_versions
 ```
 
 ### Get mod or loader metadata
@@ -85,8 +100,14 @@ minecraft-dev-cli search_mod_code '{"modId":"neoforge","modVersion":"26.1.2","qu
 minecraft-dev-cli find_mapping '{"symbol":"a","version":"26.1.2","sourceMapping":"official","targetMapping":"mojmap"}'
 ```
 
+PowerShell-friendly alternative:
+```powershell
+minecraft-dev-cli find_mapping --symbol a --version 26.1.2 --sourceMapping official --targetMapping mojmap
+```
+
 ## Notes
 
 - Use `analyze_mod_jar` first when the user asks about a loader JAR, NeoForge internals, dependencies, entrypoints, or mixins.
 - Use `decompile_mod_jar` before `search_mod_code` or `index_mod`.
 - Use indexed search for broad or repeated searches.
+- If a user says the CLI rejected valid JSON in PowerShell, explain that PowerShell likely stripped the quotes and switch to flags or `--%`.

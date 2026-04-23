@@ -2,6 +2,20 @@
 
 Use this file only when you need exact parameters or a more specific example.
 
+## PowerShell note
+
+PowerShell may strip quotes from inline JSON passed to native commands like `minecraft-dev-cli`, which turns valid JSON into invalid pseudo-JSON before the CLI sees it. In PowerShell, prefer `--key value` flags or `--%` stop-parsing when an example below uses `'{"key":"value"}'`.
+
+Examples:
+
+```powershell
+minecraft-dev-cli get_minecraft_source --version 26.1.2 --className net.minecraft.world.entity.Entity --mapping mojmap
+```
+
+```powershell
+minecraft-dev-cli --% get_minecraft_source '{"version":"26.1.2","className":"net.minecraft.world.entity.Entity","mapping":"mojmap"}'
+```
+
 ## Core Minecraft source
 
 ### `get_minecraft_source`
@@ -16,6 +30,11 @@ Parameters:
 Example:
 ```bash
 minecraft-dev-cli get_minecraft_source '{"version":"26.1.2","className":"net.minecraft.world.entity.Entity","mapping":"mojmap"}'
+```
+
+PowerShell-friendly alternative:
+```powershell
+minecraft-dev-cli get_minecraft_source --version 26.1.2 --className net.minecraft.world.entity.Entity --mapping mojmap
 ```
 
 ### `decompile_minecraft_version`
@@ -80,6 +99,11 @@ Example:
 minecraft-dev-cli find_mapping '{"symbol":"a","version":"26.1.2","sourceMapping":"official","targetMapping":"mojmap"}'
 ```
 
+PowerShell-friendly alternative:
+```powershell
+minecraft-dev-cli find_mapping --symbol a --version 26.1.2 --sourceMapping official --targetMapping mojmap
+```
+
 ### `remap_mod_jar`
 Remap a mod JAR to readable names.
 
@@ -92,6 +116,11 @@ Parameters:
 Example:
 ```bash
 minecraft-dev-cli remap_mod_jar '{"inputJar":"C:\\mods\\example-mod.jar","outputJar":"C:\\mods\\example-mod-mojmap.jar","toMapping":"mojmap"}'
+```
+
+PowerShell-friendly alternative:
+```powershell
+minecraft-dev-cli remap_mod_jar --inputJar C:\mods\example-mod.jar --outputJar C:\mods\example-mod-mojmap.jar --toMapping mojmap
 ```
 
 ### `compare_versions`
@@ -156,6 +185,11 @@ Example:
 minecraft-dev-cli analyze_mod_jar '{"jarPath":"C:\\mods\\neoforge-26.1.2-universal.jar"}'
 ```
 
+PowerShell-friendly alternative:
+```powershell
+minecraft-dev-cli analyze_mod_jar --jarPath C:\mods\neoforge-26.1.2-universal.jar
+```
+
 ### `decompile_mod_jar`
 Decompile a mod or loader JAR to readable Java source.
 
@@ -167,6 +201,11 @@ Parameters:
 Example:
 ```bash
 minecraft-dev-cli decompile_mod_jar '{"jarPath":"C:\\mods\\neoforge-26.1.2-universal.jar","mapping":"mojmap"}'
+```
+
+PowerShell-friendly alternative:
+```powershell
+minecraft-dev-cli decompile_mod_jar --jarPath C:\mods\neoforge-26.1.2-universal.jar --mapping mojmap
 ```
 
 ### `search_mod_code`
@@ -183,6 +222,11 @@ Parameters:
 Example:
 ```bash
 minecraft-dev-cli search_mod_code '{"modId":"neoforge","modVersion":"26.1.2","query":"DeferredRegister","searchType":"class","mapping":"mojmap"}'
+```
+
+PowerShell-friendly alternative:
+```powershell
+minecraft-dev-cli search_mod_code --modId neoforge --modVersion 26.1.2 --query DeferredRegister --searchType class --mapping mojmap
 ```
 
 ### `index_mod`

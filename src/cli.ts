@@ -8,6 +8,7 @@
 
 import { verifyJavaVersion } from './java/java-process.js';
 import { handleToolCall, tools } from './server/tools.js';
+import { getJsonArgumentError } from './cli-utils.js';
 import { logger } from './utils/logger.js';
 
 // CLI output helper - always outputs to stdout, never breaks structured output
@@ -39,6 +40,12 @@ EXAMPLES:
 
   # Get Minecraft source for a class
   minecraft-dev-cli get_minecraft_source '{"version": "1.21.10", "className": "net.minecraft.world.entity.Entity", "mapping": "yarn"}'
+
+  # PowerShell-friendly flag form
+  minecraft-dev-cli get_minecraft_source --version 1.21.10 --className net.minecraft.world.entity.Entity --mapping yarn
+
+  # PowerShell stop-parsing (preserves quotes for native commands)
+  minecraft-dev-cli --% get_minecraft_source '{"version":"1.21.10","className":"net.minecraft.world.entity.Entity","mapping":"yarn"}'
 
   # List available Minecraft versions
   minecraft-dev-cli list_minecraft_versions '{}'
@@ -119,7 +126,7 @@ function parseArgs(args: string[]): { tool: string; params: Record<string, unkno
       try {
         params = JSON.parse(args.slice(1).join(' '));
       } catch {
-        outputError('Invalid JSON arguments. Ensure the JSON is properly formatted.');
+        outputError(getJsonArgumentError(args.slice(1).join(' ')));
       }
     } else {
       // Parse flag format: --key value --key2 value2
