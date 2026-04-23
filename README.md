@@ -192,7 +192,7 @@ minecraft-dev-cli <command> [arguments]
 minecraft-dev-cli list-tools
 
 # Get Minecraft source for a class
-minecraft-dev-cli get_minecraft_source '{"version": "1.21.10", "className": "net.minecraft.world.entity.Entity", "mapping": "yarn"}'
+minecraft-dev-cli get_minecraft_source '{"version": "26.1.2", "className": "net.minecraft.world.entity.Entity", "mapping": "mojmap"}'
 
 # List available versions
 minecraft-dev-cli list_minecraft_versions '{}'
@@ -201,7 +201,7 @@ minecraft-dev-cli list_minecraft_versions '{}'
 minecraft-dev-cli analyze_mod_jar '{"jarPath": "/path/to/mod.jar"}'
 
 # Search Minecraft code
-minecraft-dev-cli search_minecraft_code '{"version": "1.21.10", "query": "Entity", "searchType": "class", "mapping": "yarn"}'
+minecraft-dev-cli search_minecraft_code '{"version": "26.1.2", "query": "Entity", "searchType": "class", "mapping": "mojmap"}'
 ```
 
 ### JSON Output
