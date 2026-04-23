@@ -1,0 +1,39 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug CLI",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--import",
+        "tsx"
+      ],
+      "program": "${workspaceFolder}/src/cli.ts",
+      "args": [
+        "${input:cliCommand}",
+        "${input:cliJson}"
+      ],
+      "console": "integratedTerminal",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "cliCommand",
+      "type": "promptString",
+      "description": "CLI command",
+      "default": "list-tools"
+    },
+    {
+      "id": "cliJson",
+      "type": "promptString",
+      "description": "CLI JSON arguments",
+      "default": "{}"
+    }
+  ]
+}
