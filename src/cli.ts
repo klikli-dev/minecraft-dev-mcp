@@ -8,7 +8,6 @@
 
 import { verifyJavaVersion } from './java/java-process.js';
 import { handleToolCall, tools } from './server/tools.js';
-import { getJsonArgumentError } from './cli-utils.js';
 import { logger } from './utils/logger.js';
 
 // CLI output helper - always outputs to stdout, never breaks structured output
@@ -19,6 +18,17 @@ function output(data: unknown): void {
 function outputError(message: string): void {
   console.error(JSON.stringify({ error: message }, null, 2));
   process.exit(1);
+}
+
+function parseFlagValue(value: string): unknown {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
 }
 
 // Print help text
@@ -32,29 +42,23 @@ USAGE:
 COMMANDS:
   list-tools           List all available tools with their parameters
   help                 Show this help message
-  <tool-name>          Invoke a tool with JSON arguments
+  <tool-name>          Invoke a tool with flags
 
 EXAMPLES:
   # List all available tools
   minecraft-dev-cli list-tools
 
   # Get Minecraft source for a class
-  minecraft-dev-cli get_minecraft_source '{"version": "1.21.10", "className": "net.minecraft.world.entity.Entity", "mapping": "yarn"}'
-
-  # PowerShell-friendly flag form
   minecraft-dev-cli get_minecraft_source --version 1.21.10 --className net.minecraft.world.entity.Entity --mapping yarn
 
-  # PowerShell stop-parsing (preserves quotes for native commands)
-  minecraft-dev-cli --% get_minecraft_source '{"version":"1.21.10","className":"net.minecraft.world.entity.Entity","mapping":"yarn"}'
-
   # List available Minecraft versions
-  minecraft-dev-cli list_minecraft_versions '{}'
+  minecraft-dev-cli list_minecraft_versions
 
   # Analyze a mod JAR
-  minecraft-dev-cli analyze_mod_jar '{"jarPath": "/path/to/mod.jar"}'
+  minecraft-dev-cli analyze_mod_jar --jarPath /path/to/mod.jar
 
   # Search Minecraft code
-  minecraft-dev-cli search_minecraft_code '{"version": "1.21.10", "query": "Entity", "searchType": "class", "mapping": "yarn"}'
+  minecraft-dev-cli search_minecraft_code --version 1.21.10 --query Entity --searchType class --mapping yarn
 
 AVAILABLE TOOLS:
 ${tools.map(t => `  ${t.name.padEnd(35)} ${t.description.split('.')[0]}`).join('\n')}
@@ -89,9 +93,7 @@ function listTools(): void {
   });
 }
 
-// Parse arguments - handles both formats:
-// 1. tool-name '{"key": "value"}' (JSON as second arg)
-// 2. tool-name --key value --key2 value2 (flag format)
+// Parse arguments - flags only: tool-name --key value --key2 value2
 function parseArgs(args: string[]): { tool: string; params: Record<string, unknown> } {
   if (args.length === 0) {
     outputError('No command specified. Run "minecraft-dev-cli help" for usage.');
@@ -121,34 +123,27 @@ function parseArgs(args: string[]): { tool: string; params: Record<string, unkno
   let params: Record<string, unknown> = {};
 
   if (args.length > 1) {
-    // Check if second arg is JSON
-    if (args[1].startsWith('{')) {
-      try {
-        params = JSON.parse(args.slice(1).join(' '));
-      } catch {
-        outputError(getJsonArgumentError(args.slice(1).join(' ')));
+    for (let i = 1; i < args.length; i++) {
+      const arg = args[i];
+      if (!arg.startsWith('--')) {
+        outputError(`Unexpected positional argument: ${arg}\nUse --key value or --key=value flags.`);
       }
-    } else {
-      // Parse flag format: --key value --key2 value2
-      for (let i = 1; i < args.length; i++) {
-        const arg = args[i];
-        if (arg.startsWith('--')) {
-          const key = arg.slice(2);
-          const nextArg = args[i + 1];
-          if (nextArg && !nextArg.startsWith('--')) {
-            // Try to parse as JSON value
-            try {
-              params[key] = JSON.parse(nextArg);
-            } catch {
-              params[key] = nextArg;
-            }
-            i++;
-          } else {
-            params[key] = true;
-          }
-        } else {
-          outputError(`Unexpected argument: ${arg}\nUse --key value format or pass JSON.`);
-        }
+
+      const eqIndex = arg.indexOf('=');
+      if (eqIndex > 2) {
+        const key = arg.slice(2, eqIndex);
+        const value = arg.slice(eqIndex + 1);
+        params[key] = parseFlagValue(value);
+        continue;
+      }
+
+      const key = arg.slice(2);
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('--')) {
+        params[key] = parseFlagValue(nextArg);
+        i++;
+      } else {
+        params[key] = true;
       }
     }
   }

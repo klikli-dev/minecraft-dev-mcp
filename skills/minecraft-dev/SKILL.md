@@ -7,6 +7,12 @@ description: Use this skill whenever the user wants to look up Minecraft source,
 
 Use `minecraft-dev-cli` to inspect Minecraft code, mod code, loader metadata, mappings, registries, versions, and docs.
 
+## Version format note
+
+Modern Minecraft switched away from the old `1.21.x` style in this workflow. Use the newer `26.1` style version format instead, for example `26.1.2`.
+
+Mapping should ALWAYS be `mojmap`. `yarn` is no longer used.
+
 ## Workflow
 
 1. Identify whether the user needs Minecraft source, mod source, mod loader metadata, mappings, registries, docs, validation, or version diffing.
@@ -50,17 +56,7 @@ Read `references/tools.md` only when you need parameter details or example comma
 ## Command Pattern
 
 ```bash
-minecraft-dev-cli <tool> '{"key":"value"}'
-```
-
-In PowerShell, native commands may strip quotes from inline JSON. Prefer one of these forms there:
-
-```powershell
 minecraft-dev-cli <tool> --key value --key2 value2
-```
-
-```powershell
-minecraft-dev-cli --% <tool> '{"key":"value"}'
 ```
 
 All commands return JSON with:
@@ -72,36 +68,26 @@ All commands return JSON with:
 
 ### List versions
 ```bash
-minecraft-dev-cli list_minecraft_versions '{}'
-```
-
-PowerShell-friendly alternative:
-```powershell
 minecraft-dev-cli list_minecraft_versions
 ```
 
 ### Get mod or loader metadata
 ```bash
-minecraft-dev-cli analyze_mod_jar '{"jarPath":"C:\\mods\\neoforge-26.1.2-universal.jar"}'
+minecraft-dev-cli analyze_mod_jar --jarPath C:\mods\neoforge-26.1.2-universal.jar
 ```
 
 ### Decompile mod or loader source
 ```bash
-minecraft-dev-cli decompile_mod_jar '{"jarPath":"C:\\mods\\neoforge-26.1.2-universal.jar","mapping":"mojmap"}'
+minecraft-dev-cli decompile_mod_jar --jarPath C:\mods\neoforge-26.1.2-universal.jar --mapping mojmap
 ```
 
 ### Search mod or loader source
 ```bash
-minecraft-dev-cli search_mod_code '{"modId":"neoforge","modVersion":"26.1.2","query":"DeferredRegister","searchType":"class","mapping":"mojmap"}'
+minecraft-dev-cli search_mod_code --modId neoforge --modVersion 26.1.2 --query DeferredRegister --searchType class --mapping mojmap
 ```
 
 ### Find a mapping
 ```bash
-minecraft-dev-cli find_mapping '{"symbol":"a","version":"26.1.2","sourceMapping":"official","targetMapping":"mojmap"}'
-```
-
-PowerShell-friendly alternative:
-```powershell
 minecraft-dev-cli find_mapping --symbol a --version 26.1.2 --sourceMapping official --targetMapping mojmap
 ```
 
@@ -110,4 +96,4 @@ minecraft-dev-cli find_mapping --symbol a --version 26.1.2 --sourceMapping offic
 - Use `analyze_mod_jar` first when the user asks about a loader JAR, NeoForge internals, dependencies, entrypoints, or mixins.
 - Use `decompile_mod_jar` before `search_mod_code` or `index_mod`.
 - Use indexed search for broad or repeated searches.
-- If a user says the CLI rejected valid JSON in PowerShell, explain that PowerShell likely stripped the quotes and switch to flags or `--%`.
+- If a user asks about CLI usage, always show flags-only examples.

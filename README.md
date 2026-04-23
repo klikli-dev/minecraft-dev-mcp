@@ -192,16 +192,16 @@ minecraft-dev-cli <command> [arguments]
 minecraft-dev-cli list-tools
 
 # Get Minecraft source for a class
-minecraft-dev-cli get_minecraft_source '{"version": "26.1.2", "className": "net.minecraft.world.entity.Entity", "mapping": "mojmap"}'
+minecraft-dev-cli get_minecraft_source --version 26.1.2 --className net.minecraft.world.entity.Entity --mapping mojmap
 
 # List available versions
-minecraft-dev-cli list_minecraft_versions '{}'
+minecraft-dev-cli list_minecraft_versions
 
 # Analyze a mod JAR
-minecraft-dev-cli analyze_mod_jar '{"jarPath": "/path/to/mod.jar"}'
+minecraft-dev-cli analyze_mod_jar --jarPath /path/to/mod.jar
 
 # Search Minecraft code
-minecraft-dev-cli search_minecraft_code '{"version": "26.1.2", "query": "Entity", "searchType": "class", "mapping": "mojmap"}'
+minecraft-dev-cli search_minecraft_code --version 26.1.2 --query Entity --searchType class --mapping mojmap
 ```
 
 ### JSON Output
@@ -228,7 +228,7 @@ On error:
 
 ### Skill Integration
 
-The CLI is designed for use in skills and automation scripts. See the sample skill at [`.claude/skills/mc-source-lookup/SKILL.md`](.claude/skills/mc-source-lookup/SKILL.md) for detailed usage patterns.
+The CLI is designed for use in skills and automation scripts. See the sample skill at [`./skills/minecraft-dev/SKILL.md`](.claude/skills/minecraft-dev/SKILL.md) for detailed usage patterns.
 
 </div>
 
