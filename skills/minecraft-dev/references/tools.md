@@ -81,7 +81,7 @@ minecraft-dev-cli find_mapping '{"symbol":"a","version":"26.1.2","sourceMapping"
 ```
 
 ### `remap_mod_jar`
-Remap a Fabric mod JAR to readable names.
+Remap a mod JAR to readable names.
 
 Parameters:
 - `inputJar`
