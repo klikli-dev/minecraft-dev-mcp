@@ -158,16 +158,10 @@ For scripting, automation, and skill integration, use the standalone CLI instead
 
 ### Installation
 
-The CLI is included with the package:
+From source after cloning:
 
 ```bash
-npm install -g @mcdxai/minecraft-dev-mcp
-```
-
-Or from source:
-
-```bash
-npm run build
+npm run build   
 npm link
 ```
 
@@ -470,7 +464,7 @@ Sample skills are included in [`.claude/skills/`](.claude/skills/) for common wo
 
 | Skill | Description |
 | --- | --- |
-| **[mc-source-lookup](.claude/skills/mc-source-lookup/SKILL.md)** | Quick Minecraft source code lookup using the CLI. Get class source, search code, and explore registries. |
+| **[minecraft-dev](.claude/skills/minecraft-dev/SKILL.md)** | Use minecraft-dev CLI. Get class source, search code, and explore registries. |
 
 ### Creating Custom Skills
 
